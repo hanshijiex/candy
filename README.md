@@ -1,4 +1,4 @@
 ## snake.c
 ### 贪吃蛇小程序
 
- ![image](https://github.com/hanshijiex/candy/blob/master/images/WechatIMG15.jpeg =300)
+ ![image](https://github.com/hanshijiex/candy/blob/master/images/WechatIMG15.jpeg =400*240)
