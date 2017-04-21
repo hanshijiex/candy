@@ -19,6 +19,7 @@
 #define POINT "*"
 #define MESSAGE "********************* Game Over! *********************** \n"
 #define USAGE " Usage: w/s/a/d -> up/down/left/right | space -> stop or run \n "
+#define RESTARTMSG "********************* press r to restart | q to quit ********************* \n"
 
 typedef struct _coordinate
 {
@@ -53,22 +54,29 @@ char direction = 'd'; //方向 wsad 上下左右
 int done = 0; //控制生命周期
 int suspend = 0;
 snake_node* randNode; //临时产生的坐标
+int restart = 0; //是否重新开始
 
 int main(int argc, char* argv[])
 {
-	initscr();
+restartp: initscr();
+	printf("start hello \n");
 	clear();
 	setCrmode(); // char by char
-	enableKbdSignals();
 	drawFrame();
 	initSnakeHead();
 	srand(time(0));
 	drawSnake();
 	signal(SIGIO, onInput);
 	signal(SIGALRM, moveSnake);
+	enableKbdSignals();
 	setTimer();
 	while(!done)
 	{
+		if(restart)
+		{
+			restart = 0;
+			goto restartp;
+		}
 		pause();
 	}
 	//return endwin();
@@ -125,6 +133,7 @@ void drawFrame()
 
 	// usage
 	mvaddstr(BOTTOM + 2, (RIGHT - LEFT - strlen(USAGE)) / 2, USAGE);
+	mvaddstr(BOTTOM + 3, (RIGHT - LEFT - strlen(RESTARTMSG)) / 2, RESTARTMSG);
 	refresh();
 }
 
@@ -152,7 +161,6 @@ void initSnakeHead()
 		p->next = head->next;
 		head->next = p;
 		y += 2;
-		//printf("y:%d \n", y);
 	}
 }
 
@@ -190,7 +198,7 @@ void drawSnake()
 		pnode = pnode->next;
 	}
 
-	move(BOTTOM + 3, LEFT);
+	move(BOTTOM + 4, LEFT);
 	refresh();
 }
 
@@ -211,6 +219,37 @@ void onInput()
 	if(c == ' ')
 	{
 		suspend = suspend == 1 ? 0 : 1;
+	}
+	if(c == 'r')
+	{
+		// 恢复信号缺省
+		//signal(SIGALRM, SIG_IGN);
+		//signal(SIGIO, SIG_IGN);
+
+		restart = 1;
+		suspend = 0;
+		// 防止内存泄露，要销毁链表
+		snake_node *p = head->next, *q = head->next->next;
+		while(q && q->next)
+		{
+			free(p->coord);
+			free(p);
+			p = q;
+			q = q->next;
+		}
+		if(q)
+		{
+			free(q->coord);
+			free(q);
+		}
+
+		// free randNode
+		free(randNode->coord);
+		free(randNode);
+		randNode = NULL;
+		head = NULL;
+		randNode = NULL;
+		direction = 'd';
 	}
 }
 
@@ -347,7 +386,6 @@ int checkCollision(snake_node* pnode)
 */
 snake_node* randOneNode()
 {
-	
 	int x = rand() % ( BOTTOM - TOP + 1 ) + TOP;
 	int y = 0;
 	while(y % 2 == 0)
@@ -363,6 +401,11 @@ snake_node* randOneNode()
 */
 void hookAfterMove()
 {
+	if(!head || !head->next)
+	{
+		return;
+	}
+
 	//1、如果食物是空，就初始化一颗食物
 	if(!randNode)
 	{
@@ -374,7 +417,7 @@ void hookAfterMove()
 
 		mvaddstr(randNode->coord->x, randNode->coord->y, "*");
 		refresh();
-		move(BOTTOM + 3, LEFT);
+		move(BOTTOM + 4, LEFT);
 
 		refresh();
 		//printf("x:%d y:%d \n", randNode->coord->x, randNode->coord->y);
@@ -388,13 +431,8 @@ void hookAfterMove()
 		suspend = suspend == 1 ? 0 : 1;
 		clear();
 		mvaddstr(TOP / 2, (RIGHT - LEFT - strlen(MESSAGE)) / 2, MESSAGE);
-		//mvaddstr(10, 10, "********************* Print r to restart or e to exit *********************** \n");
+		mvaddstr(TOP / 2 + 2, (RIGHT - LEFT - strlen(RESTARTMSG)) / 2, RESTARTMSG);
 		refresh();
-		//char ch = getchar();
-		//if(ch == 'e')
-		//{
-		//	done = 1;
-		//}
 	}
 	
 	//3、检查是否吃到食物 -- 吃到食物以后，加到尾巴上
