@@ -388,7 +388,9 @@ snake_node* randOneNode()
 {
 	int x = rand() % ( BOTTOM - TOP + 1 ) + TOP;
 	int y = 0;
-	while(y % 2 == 0)
+	// 奇偶性
+	int parity = head->next->coord->y % 2; 
+	while(y == 0 || y % 2 != parity)
 	{
 		y = rand() % ( RIGHT - LEFT + 1) + LEFT;
 	}
